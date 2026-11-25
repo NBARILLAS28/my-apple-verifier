@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificador AirPods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Una columna para el teléfono: una tarjeta por prueba y una barra inferior fija con el veredicto en vivo. */
+:root{
+  --bg:#F3F4F1;
+  --surface:#FFFFFF;
+  --ink:#15181B;
+  --muted:#5B6268;
+  --line:#DADDD8;
+  --accent:#2446D6;
+  --accent-ink:#FFFFFF;
+  --ok:#1E7A4C;
+  --ok-bg:#E3F2EA;
+  --warn:#8A5200;
+  --warn-bg:#FBEFD6;
+  --bad:#B3261E;
+  --bad-bg:#FBE4E1;
+  --font-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --font-body:"Instrument Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111416;
+    --surface:#1A1E21;
+    --ink:#ECEFF1;
+    --muted:#9AA3A9;
+    --line:#2B3135;
+    --accent:#8AA0FF;
+    --accent-ink:#0E1220;
+    --ok:#6FD2A0;
+    --ok-bg:#15301F;
+    --warn:#F0B24A;
+    --warn-bg:#33270E;
+    --bad:#FF8F85;
+    --bad-bg:#3A1815;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111416;
+  --surface:#1A1E21;
+  --ink:#ECEFF1;
+  --muted:#9AA3A9;
+  --line:#2B3135;
+  --accent:#8AA0FF;
+  --accent-ink:#0E1220;
+  --ok:#6FD2A0;
+  --ok-bg:#15301F;
+  --warn:#F0B24A;
+  --warn-bg:#33270E;
+  --bad:#FF8F85;
+  --bad-bg:#3A1815;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-body)}
+.wrap{max-width:640px;margin:0 auto;padding:24px 16px 120px}
+h1{font:700 32px/1.1 var(--font-display);margin:0 0 8px;text-wrap:balance}
+h2{font:600 20px/1.25 var(--font-display);margin:32px 0 12px;text-wrap:balance}
+p{margin:0 0 12px}
+a{color:var(--accent)}
+.lead{color:var(--muted);margin-bottom:16px}
+.callout{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:15px}
+.tests{display:flex;flex-direction:column;gap:12px}
+fieldset.test{margin:0;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.test legend{padding:0;font-weight:600;font-size:16px;line-height:1.35;float:left;width:100%;margin-bottom:8px}
+.test legend+*{clear:both}
+.meta{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.weight{border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-weight:500}
+.weight.w3{color:var(--bad);border-color:var(--bad)}
+.weight.w2{color:var(--warn);border-color:var(--warn)}
+details{margin:0 0 12px}
+summary{cursor:pointer;color:var(--accent);font-size:15px;font-weight:500;min-height:28px}
+details p{margin:8px 0 0;font-size:15px;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg label{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-weight:500;cursor:pointer;text-align:center}
+.seg input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.seg input:checked+label{font-weight:600}
+.seg input:checked+label.o-ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.seg input:checked+label.o-bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.seg input:checked+label.o-unk{background:var(--surface);border-color:var(--muted);color:var(--ink)}
+.seg input:checked+label.o-ok::before{content:"\2713"}
+.seg input:checked+label.o-bad::before{content:"\2715"}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card ul{margin:0;padding-left:20px}
+.card li{margin-bottom:6px}
+#resultado .verdict{display:inline-block;border-radius:999px;padding:4px 14px;font-weight:600;margin-bottom:10px}
+.k-pending{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.k-ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+.k-warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.k-bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+h3{font:600 16px/1.3 var(--font-body);margin:16px 0 6px}
+.summary{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:8px 0}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+button{font:600 15px var(--font-body);min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.foot{margin-top:24px;font-size:13px;color:var(--muted)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.bar-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bar-count{font-size:14px;color:var(--muted);white-space:nowrap}
+.bar .pill{flex:1;min-width:0;text-align:center;border-radius:999px;padding:6px 10px;font-weight:600;font-size:14px;line-height:1.2}
+.bar button{min-height:40px;padding:6px 14px;white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  .seg label{transition:background .15s,border-color .15s}
+}
+@media (max-width:380px){
+  h1{font-size:28px}
+  .bar-count{display:none}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Verificador de AirPods</h1>
+  <p class="lead">Responde las pruebas con tus AirPods en la mano. El resultado se actualiza solo.</p>
+  <div class="callout">Esto reúne evidencia, no certifica nada. Ninguna prueba sola confirma si son falsos. Está pensado para AirPods Pro de 2.ª generación (A2698 y A2699, estuche A2700).</div>
+
+  <form id="tests" class="tests-root" onsubmit="return false"></form>
+
+  <h2>Pruebas que no sirven</h2>
+  <div class="card">
+    <p>Estas cosas las copian las réplicas, así que no cuentan en ningún sentido:</p>
+    <ul>
+      <li>La animación que aparece en el iPhone al abrir la tapa.</li>
+      <li>El nombre «AirPods Pro», el porcentaje de batería y el menú de Audio espacial.</li>
+      <li>El modelo y el serial que muestra Ajustes. iOS arma esa pantalla con lo que los audífonos dicen ser.</li>
+    </ul>
+  </div>
+
+  <section id="resultado" aria-live="polite">
+    <h2>Resultado</h2>
+    <div class="card" id="result-card"></div>
+  </section>
+
+  <p class="foot">Herramienta de orientación hecha con Claude. No es una certificación de Apple ni sustituye su verificación.</p>
+</main>
+
+<div class="bar" role="status">
+  <div class="bar-in">
+    <span class="bar-count" id="bar-count"></span>
+    <span class="pill k-pending" id="bar-pill"></span>
+    <button type="button" class="primary" id="bar-go">Ver resultado</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var GROUPS=[
+    ['a','A simple vista'],
+    ['b','En Ajustes y con Apple'],
+    ['c','Funciones de los originales'],
+    ['d','La compra']
+  ];
+  var TESTS=[
+    {id:'color',g:'a',w:3,
+     q:'¿El estuche, los AirPods y las almohadillas son blancos?',
+     how:'Apple vende los AirPods Pro solo en blanco, que sepamos. Negro, gris u otro color indica que los pintaron o forraron, o que son una réplica. Las almohadillas originales también son blancas.',
+     flag:'No son blancos: Apple vende los AirPods Pro solo en blanco'},
+    {id:'serial',g:'a',w:3,
+     q:'¿El serial de Ajustes es igual al impreso dentro de la tapa del estuche y bajo la almohadilla del AirPod?',
+     how:'En el iPhone: Ajustes → Bluetooth → ⓘ junto a tus AirPods → Número de serie. Compáralo letra por letra con el impreso. Si no coincide, o no hay serial impreso, marca No.',
+     flag:'El serial de Ajustes no coincide con el impreso'},
+    {id:'modelo',g:'a',w:2,
+     q:'¿Bajo la almohadilla de cada AirPod dice A2698 (derecho) y A2699 (izquierdo)?',
+     how:'El número de modelo está impreso en la parte inferior de cada AirPod. Esos son los de los AirPods Pro 2 con estuche Lightning. En la versión USB-C son A3047 y A3048.',
+     flag:'Los modelos impresos no coinciden con unos AirPods Pro 2'},
+    {id:'firmware',g:'b',w:2,
+     q:'¿La versión de firmware es reciente?',
+     how:'Ajustes → Bluetooth → ⓘ → Versión. Los originales se actualizan solos si se cargan cerca de un iPhone con iOS al día. A junio de 2026, la versión más reciente que encontramos para AirPods Pro 2 era 8B41. Una versión de 2023, como 5E135, en un iPhone actual es sospechosa, sobre todo si no cambia con los meses.',
+     flag:'El firmware no se actualiza (versión antigua)'},
+    {id:'cobertura',g:'b',w:3,
+     q:'¿checkcoverage.apple.com reconoce el serial como AirPods Pro (2.ª generación)?',
+     how:'Entra a <a href="https://checkcoverage.apple.com" target="_blank" rel="noopener">checkcoverage.apple.com</a> y escribe el serial. Si Apple no lo reconoce, marca No. Si lo reconoce, marca Sí, pero no es prueba definitiva: las réplicas suelen copiar seriales reales.',
+     flag:'Apple no reconoce el serial'},
+    {id:'sonido',g:'c',w:3,
+     q:'En la app Buscar, ¿el estuche reproduce un sonido propio con «Reproducir sonido»?',
+     how:'Abre Buscar → Dispositivos → tus AirPods. En los AirPods Pro 2 el estuche tiene altavoz y suena por sí solo. Si solo suenan los AirPods, o no aparece la opción para el estuche, marca No.',
+     flag:'El estuche no suena desde Buscar'},
+    {id:'precision',g:'c',w:2,
+     q:'¿Buscar te muestra la flecha de «Buscar con precisión» para el estuche?',
+     how:'Necesitas un iPhone 11 o posterior y estar cerca del estuche. En Buscar, toca el estuche y elige «Buscar». Los originales tienen un chip que indica dirección y distancia.',
+     flag:'No funciona Buscar con precisión'},
+    {id:'volumen',g:'c',w:2,
+     q:'¿Deslizar el dedo por el tallo sube y baja el volumen?',
+     how:'En unos AirPods Pro 2 originales, deslizar hacia arriba o hacia abajo sobre el sensor del tallo cambia el volumen mientras suena música.',
+     flag:'El tallo no responde al deslizamiento'},
+    {id:'ruido',g:'c',w:1,
+     q:'¿La cancelación de ruido baja claramente el ruido ambiente?',
+     how:'Pon música a volumen bajo en un lugar con ruido constante (ventilador, calle) y cambia entre Desactivado y Cancelación de ruido. En los originales la diferencia es muy fuerte, no sutil.',
+     flag:'La cancelación de ruido es débil'},
+    {id:'almohadillas',g:'c',w:1,
+     q:'¿La «Prueba de almohadillas» se completa y da un resultado para cada oído?',
+     how:'Ajustes → Bluetooth → ⓘ → Prueba de almohadillas. Con AirPods originales la prueba reproduce un sonido y termina con un resultado de ajuste. Si se queda trabada o falla siempre, marca No.',
+     flag:'La prueba de almohadillas falla o no termina'},
+    {id:'vendedor',g:'d',w:2,
+     q:'¿Los compraste en Apple o en un distribuidor autorizado, con factura?',
+     how:'Apple, tiendas Apple autorizadas y tiendas oficiales. Marketplaces, vendedores sin factura o regalos sin comprobante cuentan como No.',
+     flag:'No vienen de Apple ni de un distribuidor autorizado'},
+    {id:'precio',g:'d',w:2,
+     q:'¿El precio fue parecido al de Apple?',
+     how:'Un precio muy por debajo del de Apple (por ejemplo, la mitad) para unos AirPods Pro nuevos es una de las señales más comunes de réplica.',
+     flag:'Precio muy por debajo del de Apple'},
+    {id:'caja',g:'d',w:1,
+     q:'¿Venían en caja sellada con el mismo serial impreso?',
+     how:'La caja original trae el serial en la etiqueta y viene sellada. Si no tienes la caja, marca No sé.',
+     flag:'La caja o su serial no coinciden'}
+  ];
+  var WORD={3:'alto',2:'medio',1:'bajo'};
+  var KEY='verificador-airpods-v1';
+  var state={};
+  try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(e){state={};}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+  function buildForm(){
+    var html='';
+    GROUPS.forEach(function(g){
+      html+='<h2>'+g[1]+'</h2><div class="tests">';
+      TESTS.filter(function(t){return t.g===g[0];}).forEach(function(t){
+        var v=state[t.id]||'';
+        html+='<fieldset class="test"><legend>'+t.q+'</legend>'+
+          '<p class="meta"><span class="weight w'+t.w+'">Peso '+WORD[t.w]+'</span></p>'+
+          '<details><summary>Cómo probarlo</summary><p>'+t.how+'</p></details>'+
+          '<div class="seg">'+
+          opt(t.id,'ok','Sí','o-ok',v)+opt(t.id,'bad','No','o-bad',v)+opt(t.id,'unk','No sé','o-unk',v)+
+          '</div></fieldset>';
+      });
+      html+='</div>';
+    });
+    document.getElementById('tests').innerHTML=html;
+  }
+  function opt(id,val,label,cls,cur){
+    var fid=id+'-'+val;
+    return '<input type="radio" name="'+id+'" id="'+fid+'" value="'+val+'"'+(cur===val?' checked':'')+'>'+
+           '<label for="'+fid+'" class="'+cls+'">'+label+'</label>';
+  }
+
+  function level(score,informed){
+    if(informed<6) return {k:'pending',t:'Faltan pruebas',d:'Responde al menos 6 con Sí o No para ver un resultado.'};
+    if(score<=2) return {k:'ok',t:'Sin señales claras de falsificación',d:'Aprobar estas pruebas no confirma que sean originales. Confírmalo con Apple.'};
+    if(score<=5) return {k:'warn',t:'Hay dudas',d:'Hay señales de alerta, pero todavía no son concluyentes. Haz las pruebas que te faltan y verifica con Apple.'};
+    if(score<=9) return {k:'bad',t:'Sospechosos',d:'Varias señales de alerta importantes. Es probable que no sean originales.'};
+    return {k:'bad',t:'Muy probablemente falsos',d:'Muchas señales graves juntas. Casi seguro que no son originales de Apple.'};
+  }
+
+  function compute(){
+    var score=0,informed=0,answered=0,flags=[];
+    TESTS.forEach(function(t){
+      var v=state[t.id];
+      if(v) answered++;
+      if(v==='ok'||v==='bad') informed++;
+      if(v==='bad'){score+=t.w;flags.push(t);}
+    });
+    flags.sort(function(a,b){return b.w-a.w;});
+    return {score:score,informed:informed,answered:answered,flags:flags,lv:level(score,informed)};
+  }
+
+  function summaryText(r){
+    var lines=['Verificador de AirPods (AirPods Pro, modelo A2698)',
+      'Resultado: '+r.lv.t+' (puntaje de alerta '+r.score+')'];
+    if(r.flags.length){
+      lines.push('Señales de alerta:');
+      r.flags.forEach(function(t){lines.push('- '+t.flag);});
+    }else{
+      lines.push('Sin señales de alerta marcadas.');
+    }
+    return lines.join('\n');
+  }
+
+  function has(id){return state[id]==='bad';}
+
+  function update(){
+    var r=compute();
+    document.getElementById('bar-count').textContent=r.answered+' de '+TESTS.length+' respondidas';
+    var pill=document.getElementById('bar-pill');
+    pill.textContent=r.lv.t;
+    pill.className='pill k-'+r.lv.k;
+
+    var h='<span class="verdict k-'+r.lv.k+'">'+r.lv.t+'</span><p>'+r.lv.d+'</p>';
+    if(r.flags.length){
+      h+='<h3>Señales de alerta ('+r.flags.length+')</h3><ul>';
+      r.flags.forEach(function(t){h+='<li>'+t.flag+'</li>';});
+      h+='</ul>';
+    }
+    h+='<h3>Qué hacer ahora</h3><ul>'+
+       '<li>Confirma con Apple: lleva los AirPods a un distribuidor autorizado o abre una solicitud en <a href="https://getsupport.apple.com" target="_blank" rel="noopener">getsupport.apple.com</a>. Es la única verificación definitiva.</li>';
+    if(r.score>=3){
+      h+='<li>Si los compraste en línea, reclama pronto: devolución por producto falsificado y, si pagaste con tarjeta, una disputa con tu banco. Los plazos son cortos.</li>';
+    }
+    if(has('firmware')){
+      h+='<li>El firmware no se puede forzar. Apple lo instala solo en AirPods originales, y una réplica no puede recibirlo.</li>';
+    }
+    h+='</ul><h3>Resumen para copiar</h3><div class="summary" id="summary"></div>'+
+       '<div class="actions"><button type="button" class="primary" id="copy">Copiar resumen</button>'+
+       '<button type="button" id="reset">Borrar respuestas</button></div><p id="copy-msg" class="foot"></p>';
+    document.getElementById('result-card').innerHTML=h;
+    document.getElementById('summary').textContent=summaryText(r);
+  }
+
+  document.getElementById('tests').addEventListener('change',function(e){
+    var t=e.target;
+    if(t&&t.type==='radio'){state[t.name]=t.value;save();update();}
+  });
+  document.getElementById('result-card').addEventListener('click',function(e){
+    var id=e.target&&e.target.id;
+    if(id==='reset'){state={};save();buildForm();update();window.scrollTo(0,0);}
+    if(id==='copy'){
+      var msg=document.getElementById('copy-msg');
+      var text=document.getElementById('summary').textContent;
+      try{
+        navigator.clipboard.writeText(text).then(function(){msg.textContent='Resumen copiado.';},
+          function(){msg.textContent='No se pudo copiar. Mantén presionado el texto para seleccionarlo.';});
+      }catch(err){msg.textContent='No se pudo copiar. Mantén presionado el texto para seleccionarlo.';}
+    }
+  });
+  document.getElementById('bar-go').addEventListener('click',function(){
+    var el=document.getElementById('resultado');
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+
+  buildForm();
+  update();
+})();
+</script>
+</body>
+</html>
